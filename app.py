@@ -19,7 +19,11 @@ MAX_ENTRY_SECONDS = 14 * 60
 # Current test thresholds. We will adjust these using results.
 THREE_MINUTE_THRESHOLD = 0.04
 FIVE_MINUTE_THRESHOLD = 0.06
+MIN_YES_PRICE = 0.35
+MAX_YES_PRICE = 0.65
 
+MIN_TIME_LEFT = 180
+MAX_TIME_LEFT = 720
 TRACKER_FILE = "/data/paper_trades.json"
 
 
