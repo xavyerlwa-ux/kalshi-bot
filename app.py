@@ -20,7 +20,7 @@ MAX_ENTRY_SECONDS = 14 * 60
 THREE_MINUTE_THRESHOLD = 0.04
 FIVE_MINUTE_THRESHOLD = 0.06
 
-TRACKER_FILE = "paper_trades.json"
+TRACKER_FILE = "/data/paper_trades.json"
 
 
 def load_tracker() -> dict[str, Any]:
