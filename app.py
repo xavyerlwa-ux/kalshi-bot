@@ -358,7 +358,32 @@ def scan(
     remaining = seconds_until_close(
         market["close_time"]
     )
+try:
+    yes_ask = float(market.get("yes_ask_dollars") or 0)
+    no_ask = float(market.get("no_ask_dollars") or 0)
+except (TypeError, ValueError):
+    yes_ask = 0.0
+    no_ask = 0.0
 
+price_is_valid = (
+    MIN_YES_PRICE <= yes_ask <= MAX_YES_PRICE
+    if signal == "YES"
+    else MIN_YES_PRICE <= no_ask <= MAX_YES_PRICE
+    if signal == "NO"
+    else False
+)
+
+time_is_valid = (
+    MIN_TIME_LEFT <= remaining <= MAX_TIME_LEFT
+)
+
+if signal != "SKIP" and not price_is_valid:
+    print("Signal rejected: contract price outside 35¢–65¢.", flush=True)
+    signal = "SKIP"
+
+if signal != "SKIP" and not time_is_valid:
+    print("Signal rejected: outside 3–12 minute window.", flush=True)
+    signal = "SKIP"
     print("=" * 55, flush=True)
     print(
         f"BTC: ${current_price:,.2f}",
