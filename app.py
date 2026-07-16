@@ -1,47 +1,62 @@
-import os
 import time
 import requests
 
-BASE_URL = "https://demo-api.kalshi.co/trade-api/v2"
+BASE_URL = "https://external-api.demo.kalshi.co/trade-api/v2"
 
-API_KEY = os.environ["KALSHI_API_KEY_ID"]
 
-def get_markets():
-    headers = {
-        "KALSHI-ACCESS-KEY": API_KEY
-    }
-
+def inspect_markets() -> None:
     try:
-        r = requests.get(
+        response = requests.get(
             f"{BASE_URL}/markets",
-            headers=headers,
-            timeout=15
+            params={
+                "status": "open",
+                "limit": 20,
+            },
+            timeout=20,
         )
 
-        print(f"HTTP Status: {r.status_code}")
+        print(f"HTTP status: {response.status_code}", flush=True)
+        response.raise_for_status()
 
-        if r.status_code == 200:
-            data = r.json()
+        data = response.json()
+        markets = data.get("markets", [])
 
-            print("========== BTC MARKETS ==========")
+        print(f"Markets returned: {len(markets)}", flush=True)
+        print("========== MARKET NAMES ==========", flush=True)
 
-            for market in data.get("markets", []):
-                text = str(market)
+        for number, market in enumerate(markets, start=1):
+            ticker = market.get("ticker", "No ticker")
+            title = market.get("title", "No title")
+            subtitle = market.get("subtitle", "")
+            status = market.get("status", "unknown")
 
-                if "BTC" in text or "Bitcoin" in text:
-                    print(text)
+            print(
+                f"{number}. {ticker} | {title} | {subtitle} | {status}",
+                flush=True,
+            )
 
-            print("================================")
+        print("==================================", flush=True)
 
-        else:
-            print(r.text)
+        cursor = data.get("cursor")
+        print(f"Next-page cursor exists: {bool(cursor)}", flush=True)
 
-    except Exception as e:
-        print(e)
+    except requests.HTTPError as error:
+        print(
+            f"HTTP error: {error.response.status_code} "
+            f"{error.response.text[:500]}",
+            flush=True,
+        )
+    except Exception as error:
+        print(
+            f"Bot error: {type(error).__name__}: {error}",
+            flush=True,
+        )
 
 
-print("Watching BTC markets...")
+print("Kalshi market inspector started.", flush=True)
+print("Safety mode: READ ONLY / NO ORDERS", flush=True)
 
 while True:
-    get_markets()
-    time.sleep(60)
+    inspect_markets()
+    print("Checking again in 5 minutes.", flush=True)
+    time.sleep(300)
