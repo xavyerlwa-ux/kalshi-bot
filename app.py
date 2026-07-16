@@ -24,7 +24,7 @@ MAX_YES_PRICE = 0.65
 
 MIN_TIME_LEFT = 180
 MAX_TIME_LEFT = 720
-TRACKER_FILE = "/data/paper_trades.json"
+TRACKER_FILE = "paper_trades.json"
 
 
 def load_tracker() -> dict[str, Any]:
