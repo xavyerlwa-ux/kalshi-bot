@@ -1,4 +1,5 @@
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 import requests
@@ -6,25 +7,22 @@ import requests
 
 BASE_URL = "https://external-api.demo.kalshi.co/trade-api/v2"
 
-SEARCH_WORDS = (
+CHECK_EVERY_SECONDS = 30
+LOOKAHEAD_MINUTES = 20
+
+BTC_WORDS = (
     "btc",
     "bitcoin",
-    "crypto",
     "cf benchmarks",
-    "rti",
 )
 
-CHECK_EVERY_SECONDS = 300
-MAX_PAGES = 20
 
-
-def contains_search_word(market: dict[str, Any]) -> bool:
-    searchable_text = " ".join(
+def is_bitcoin_market(market: dict[str, Any]) -> bool:
+    text = " ".join(
         str(market.get(field, ""))
         for field in (
             "ticker",
             "event_ticker",
-            "series_ticker",
             "title",
             "subtitle",
             "yes_sub_title",
@@ -33,84 +31,104 @@ def contains_search_word(market: dict[str, Any]) -> bool:
         )
     ).lower()
 
-    return any(word in searchable_text for word in SEARCH_WORDS)
+    return any(word in text for word in BTC_WORDS)
 
 
-def find_btc_markets() -> None:
-    cursor: str | None = None
-    page_number = 0
-    markets_checked = 0
-    matches: list[dict[str, Any]] = []
+def seconds_until_close(close_time: str) -> int:
+    close_dt = datetime.fromisoformat(
+        close_time.replace("Z", "+00:00")
+    )
+    now = datetime.now(timezone.utc)
+    return int((close_dt - now).total_seconds())
 
-    while page_number < MAX_PAGES:
-        page_number += 1
 
-        params: dict[str, Any] = {
-            "status": "open",
+def get_nearby_bitcoin_markets() -> None:
+    now_ts = int(time.time())
+    future_ts = now_ts + LOOKAHEAD_MINUTES * 60
+
+    response = requests.get(
+        f"{BASE_URL}/markets",
+        params={
             "limit": 1000,
-        }
+            "min_close_ts": now_ts,
+            "max_close_ts": future_ts,
+            "mve_filter": "exclude",
+        },
+        timeout=30,
+    )
 
-        if cursor:
-            params["cursor"] = cursor
+    print(f"HTTP status: {response.status_code}", flush=True)
+    response.raise_for_status()
 
-        response = requests.get(
-            f"{BASE_URL}/markets",
-            params=params,
-            timeout=30,
-        )
+    markets = response.json().get("markets", [])
 
-        print(
-            f"Page {page_number} HTTP status: {response.status_code}",
-            flush=True,
-        )
+    matches = [
+        market
+        for market in markets
+        if is_bitcoin_market(market)
+    ]
 
-        response.raise_for_status()
+    matches.sort(
+        key=lambda market: market.get("close_time", "")
+    )
 
-        data = response.json()
-        markets = data.get("markets", [])
-        markets_checked += len(markets)
-
-        for market in markets:
-            if contains_search_word(market):
-                matches.append(market)
-
-        cursor = data.get("cursor")
-
-        if not cursor or not markets:
-            break
-
-    print("=" * 50, flush=True)
-    print(f"Markets checked: {markets_checked}", flush=True)
-    print(f"Possible BTC markets found: {len(matches)}", flush=True)
+    print("=" * 55, flush=True)
+    print(
+        f"BTC markets closing within {LOOKAHEAD_MINUTES} minutes: "
+        f"{len(matches)}",
+        flush=True,
+    )
 
     if not matches:
         print(
-            "No matching BTC markets exist in the demo environment right now.",
+            "No short-term BTC markets found in demo right now.",
             flush=True,
         )
-    else:
-        for number, market in enumerate(matches, start=1):
-            print("-" * 50, flush=True)
-            print(f"Match #{number}", flush=True)
-            print(f"Ticker: {market.get('ticker')}", flush=True)
-            print(f"Series: {market.get('series_ticker')}", flush=True)
-            print(f"Event: {market.get('event_ticker')}", flush=True)
-            print(f"Title: {market.get('title')}", flush=True)
-            print(f"Subtitle: {market.get('subtitle')}", flush=True)
-            print(f"Yes bid: {market.get('yes_bid')}", flush=True)
-            print(f"Yes ask: {market.get('yes_ask')}", flush=True)
-            print(f"Close time: {market.get('close_time')}", flush=True)
 
-    print("=" * 50, flush=True)
+    for market in matches[:20]:
+        close_time = market.get("close_time")
+        remaining = (
+            seconds_until_close(close_time)
+            if close_time
+            else -1
+        )
+
+        minutes = max(remaining, 0) // 60
+        seconds = max(remaining, 0) % 60
+
+        print("-" * 55, flush=True)
+        print(f"Ticker: {market.get('ticker')}", flush=True)
+        print(f"Event: {market.get('event_ticker')}", flush=True)
+        print(f"Title: {market.get('title')}", flush=True)
+        print(f"Subtitle: {market.get('subtitle')}", flush=True)
+        print(f"Closes in: {minutes}:{seconds:02d}", flush=True)
+        print(
+            f"YES bid/ask: "
+            f"{market.get('yes_bid_dollars')} / "
+            f"{market.get('yes_ask_dollars')}",
+            flush=True,
+        )
+        print(
+            f"NO bid/ask: "
+            f"{market.get('no_bid_dollars')} / "
+            f"{market.get('no_ask_dollars')}",
+            flush=True,
+        )
+        print(
+            f"Last price: {market.get('last_price_dollars')}",
+            flush=True,
+        )
+
+    print("=" * 55, flush=True)
 
 
 def main() -> None:
-    print("BTC market search bot started.", flush=True)
+    print("Phase 2 BTC short-market scanner started.", flush=True)
     print("Safety mode: READ ONLY / ZERO ORDERS", flush=True)
 
     while True:
         try:
-            find_btc_markets()
+            get_nearby_bitcoin_markets()
         except requests.HTTPError as error:
             response = error.response
             print(
@@ -124,7 +142,7 @@ def main() -> None:
                 flush=True,
             )
 
-        print("Searching again in 5 minutes.", flush=True)
+        print("Next scan in 30 seconds.", flush=True)
         time.sleep(CHECK_EVERY_SECONDS)
 
 
