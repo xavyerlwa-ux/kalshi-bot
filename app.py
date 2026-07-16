@@ -13,8 +13,8 @@ COINBASE_BASE_URL = "https://api.exchange.coinbase.com"
 CHECK_EVERY_SECONDS = 30
 
 # Only record predictions during this window.
-MIN_ENTRY_SECONDS = 7 * 60
-MAX_ENTRY_SECONDS = 12 * 60
+MIN_ENTRY_SECONDS = 2 * 60
+MAX_ENTRY_SECONDS = 14 * 60
 
 # Current test thresholds. We will adjust these using results.
 THREE_MINUTE_THRESHOLD = 0.04
