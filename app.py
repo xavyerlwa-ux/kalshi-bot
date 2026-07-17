@@ -29,12 +29,12 @@ MIN_CONTRACT_PRICE = 0.35
 MAX_CONTRACT_PRICE = 0.65
 
 # Apply the stricter trade filter from 3–12 minutes remaining.
-MIN_FILTER_TIME_LEFT = 3 * 60
-MAX_FILTER_TIME_LEFT = 12 * 60
+MIN_FILTER_TIME_LEFT = 2 * 60
+MAX_FILTER_TIME_LEFT = 15 * 60
 
 # General recording window.
 MIN_ENTRY_SECONDS = 2 * 60
-MAX_ENTRY_SECONDS = 14 * 60
+MAX_ENTRY_SECONDS = 15 * 60
 
 # Local storage.
 # This can reset whenever Railway redeploys or restarts.
