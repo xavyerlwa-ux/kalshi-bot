@@ -13,7 +13,7 @@ import requests
 
 # Kalshi demo market-data API.
 # This program does NOT contain any order-placement code.
-KALSHI_BASE_URL = "https://external-api.demo.kalshi.co/trade-api/v2"
+KALSHI_BASE_URL = "https://external-api.kalshi.com/trade-api/v2"
 
 # Coinbase public market-data API.
 COINBASE_BASE_URL = "https://api.exchange.coinbase.com"
